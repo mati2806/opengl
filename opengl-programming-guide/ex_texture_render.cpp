@@ -347,11 +347,21 @@ void GlutDisplay( )
         1.0f, 0.0f,
         0.0f, 0.0f
     };
+    static const ushort vert_data [] =
+    {
+        0, 1, 2, 3
+    };
 
     GLuint buf;
+    GLuint vbuf;
+    glGenBuffers(1, &vbuf);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbuf);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vert_data), vert_data, GL_STATIC_DRAW);
+
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ARRAY_BUFFER, buf);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_data), &quad_data[0], GL_STATIC_DRAW);
+
     GLuint vao;
     glGenVertexArrays(1,&vao);
     glBindVertexArray(vao);
@@ -359,7 +369,9 @@ void GlutDisplay( )
     glEnableVertexAttribArray (0);
     glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(16*sizeof(float)));
     glEnableVertexAttribArray(1);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbuf);
+    glDrawElements(GL_TRIANGLE_FAN, 4,GL_UNSIGNED_SHORT, 0);
+//    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glFinish( );
     glutSwapBuffers( );
 
