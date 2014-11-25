@@ -72,9 +72,10 @@ vector<shared_ptr<Actor>> scene_graph;
 //  @@TODO Should move into a variable system
 Shader vertex_shader(GL_VERTEX_SHADER), fragment_shader(GL_FRAGMENT_SHADER);
 Shader ads_vertex_shader(GL_VERTEX_SHADER), ads_fragment_shader(GL_FRAGMENT_SHADER);
-ShaderProgram diffuse_shading;
-ShaderProgram ads_shading;
-ShaderProgram * global_shader;
+shared_ptr<ShaderProgram> diffuse_shading;
+shared_ptr<ShaderProgram> ads_shading;
+shared_ptr<ShaderProgram> default_shader;
+shared_ptr<ShaderProgram>  global_shader;
 glm::mat4 MVP;
 glm::mat4 camera_matrix;
 glm::mat3 NormalMatrix;
@@ -154,10 +155,11 @@ void GenerateShaders( ) {
         fragment_shader.SourceFile("../shaders/diffuse_shading.frag");
         vertex_shader.Compile();
         fragment_shader.Compile();
-        diffuse_shading.addShader(vertex_shader.GetHandle());
-        diffuse_shading.addShader(fragment_shader.GetHandle());
-        diffuse_shading.link();
-        diffuse_shading.unuse();
+	diffuse_shading = shared_ptr<ShaderProgram> {new ShaderProgram};
+        diffuse_shading->addShader(vertex_shader.GetHandle());
+        diffuse_shading->addShader(fragment_shader.GetHandle());
+        diffuse_shading->link();
+        diffuse_shading->unuse();
     }
     catch (ShaderProgramException excp) {
         cerr << excp.what () << endl;
@@ -169,19 +171,20 @@ void GenerateShaders( ) {
         ads_fragment_shader.SourceFile("../shaders/ads_shading.frag");
         ads_vertex_shader.Compile();
         ads_fragment_shader.Compile();
-        ads_shading.addShader(ads_vertex_shader.GetHandle());
-        ads_shading.addShader(ads_fragment_shader.GetHandle());
-        ads_shading.link();
-        ads_shading.unuse();
-        ads_shading.printActiveUniforms();
+	ads_shading = shared_ptr<ShaderProgram> {new ShaderProgram};
+        ads_shading->addShader(ads_vertex_shader.GetHandle());
+        ads_shading->addShader(ads_fragment_shader.GetHandle());
+        ads_shading->link();
+        ads_shading->unuse();
+        ads_shading->printActiveUniforms();
     }
     catch (ShaderProgramException excp) {
         cerr << excp.what() << endl;
         exit (EXIT_FAILURE);
     }
 
-//    global_shader = &diffuse_shading;
-    global_shader = &ads_shading;
+//    global_shader = diffuse_shading;
+    global_shader = ads_shading;
 }
 
 void GlutReshape( int newWidth, int newHeight )
@@ -209,7 +212,14 @@ void GlutDisplay( )
     NormalMatrix = glm::mat3 (glm::vec3( ModelViewMatrix[0]), glm::vec3( ModelViewMatrix[1]), glm::vec3( ModelViewMatrix[2]));
     MVP = display->getPerspective() * ModelViewMatrix;
 
-    //	Light Movement
+    //  Set render state
+    static const GLfloat one = 1.0f;
+    static const glm::vec3 clear_color = glm::vec3(0.0, 0.0, 0.0);
+
+    glClearBufferfv (GL_COLOR, 0, &clear_color[0]);
+    glClearBufferfv (GL_DEPTH, 0, &one);
+
+//	Light Movement
     static float bounce = 0.0f;
     static bool bounce_lr = true;  //  True = left; False = right;
     const float bounce_distance = 10.0f;
@@ -228,6 +238,7 @@ void GlutDisplay( )
 
     //  Set values in the shader
     global_shader->use();
+    try {
     global_shader->setUniform("NormalMatrix", NormalMatrix);
     //global_shader->setUniform("ProjectionMatrix", Projection);
     global_shader->setUniform("ModelViewMatrix", ModelViewMatrix);
@@ -240,7 +251,9 @@ void GlutDisplay( )
     global_shader->setUniform("Light.Ls", Ls);
     global_shader->setUniform("Light.Position", LightPosition);
     global_shader->setUniform("Material.Shininess", Shine);
-
+   }
+    catch (std::out_of_range excp) {
+}
     display->Render( scene_graph );
     global_shader->unuse();
 
@@ -407,7 +420,7 @@ void GenerateEntities( ) {
     GLfloat a = 0.0f;
     for ( int i = 0; i < 1; i++, a += 10.0f ) {
         scene_graph.push_back( shared_ptr<Actor>{ new Actor(
-                                                  a, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, i ) } );
+                                                  a, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, global_shader, i)  } );
     }
     //  Selected Entity
     selected = camera;

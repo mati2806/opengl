@@ -8,8 +8,10 @@ void Renderer::Render( std::vector<shared_ptr<Actor>> &actors ) {
     for ( shared_ptr<Actor> a : actors ) {
         glm::mat4 model = glm::mat4(1.0f);
         model *= glm::translate(glm::mat4(1.0f), a->getPosition());
-        model *= glm::rotate( glm::mat4(1.0f), a->getOrientation().x + rot, glm::vec3(0.0f, 1.0f, 0.0));
+//        model *= glm::rotate( glm::mat4(1.0f), a->getOrientation().x + rot, glm::vec3(0.0f, 1.0f, 0.0));
+	try {
         a->getShader()->setUniform("M", model);
+	} catch (std::out_of_range excp) { }
         get_model (a->model_id)->render( );
     }
     rot += 0.2f;
