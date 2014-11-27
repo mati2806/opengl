@@ -29,6 +29,8 @@ class Model
     long numVertices;
     string name;
     vector<float> vertices;
+    vector<unsigned short> indexes;
+    vector<GLuint> index_buffers;
     vector<GLuint> vaos;
     vector<GLuint> buffers;
     int renderPrimitive;

@@ -34,6 +34,7 @@ using namespace std;
 #include "common/Actor.h"
 #include "common/Camera.h"
 #include "common/Model_vbotorus.h"
+#include "common/Modelindexed.h"
 
 enum class queue_events {
     STRAFE_LEFT,
@@ -181,9 +182,9 @@ int main( int argc, char **argv ) {
     display->setCamera (camera);
 
     //  Load our Application Items
-    GenerateModels( );
     GenerateShaders( );
     GenerateOculusRenderReqs( );
+    GenerateModels( );
 
     //  This scene specific items
     GenerateEntities( );
@@ -553,7 +554,7 @@ void GenerateEntities( ) {
     //  Actors
     GLfloat a = 0.0f;
     for ( int i = 0; i < 10; i++, a += 5.0f ) {
-        shared_ptr<Actor> actor = shared_ptr<Actor>{ new Actor(a, 0.0f, /*a*/0.0f, a, 0.0f, 0.0f, 0 ) };
+        shared_ptr<Actor> actor = shared_ptr<Actor>{ new Actor(a, 0.0f, /*a*/0.0f, a, 0.0f, 0.0f,global_shader, i ) };
         actor->setShader(global_shader);
         scene_graph.push_back(actor);
     }
@@ -587,6 +588,29 @@ void GenerateOculusRenderReqs ()
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, renderTargetSize.w, renderTargetSize.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 
+    for (int eyeNum = 0; eyeNum < 2; eyeNum++) {
+        ovrDistortionMesh meshData;
+        ovrHmd_CreateDistortionMesh(*hmd, eyeRenderDesc[eyeNum].Eye, eyeRenderDesc[eyeNum].Fov,
+                                    hmdDesc->DistortionCaps, &meshData);
+        shared_ptr<ModelIndexed> tmp;
+        tmp = shared_ptr<ModelIndexed> { new ModelIndexed};
+        tmp->numVertices = meshData.VertexCount;
+        tmp->vertices.resize( tmp->numVertices * 3 );
+        for (int i = 0; i < tmp->numVertices; i++) {
+            tmp->vertices[i*3] = meshData.pVertexData[i].Pos.x;
+            tmp->vertices[i*3 + 1] = meshData.pVertexData[i].Pos.y;
+            tmp->vertices[i*3 + 2] = 0.0f;
+        }
+        tmp->name = "oculusMesh";
+        tmp->renderPrimitive = GL_TRIANGLES;
+        tmp->indexes.resize(meshData.IndexCount);
+        for (int i = 0; i < tmp->indexes.size(); i++ ) {
+            tmp->indexes[i] = meshData.pIndexData[i];
+        }
+
+        tmp->setup_render_model();
+        renderer->add_model(tmp);
+    }
 
 //    int eyeNum = 0;
 //    ovrDistortionMesh meshData;
